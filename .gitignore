@@ -18,6 +18,9 @@ __pycache__/
 data/documents/*
 !data/documents/.gitkeep
 chroma_db/
+database/*.db
+*.db
+*.sqlite3
 
 # IDE and operating system files
 .vscode/
