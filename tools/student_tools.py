@@ -45,6 +45,34 @@ def get_student_details(
     return _format_response(cleaned_id, row)
 
 
+def get_student_by_name(
+    name: str, db_path: str | Path = DEFAULT_DB_PATH
+) -> dict[str, Any]:
+    """Look up a student profile and email by their name."""
+    cleaned_name = str(name).strip()
+    query = """
+    SELECT student_id, name, branch, semester, attendance_percent, cgpa, backlogs, attendance_status
+    FROM students
+    WHERE LOWER(name) LIKE LOWER(?);
+    """
+    row = fetch_one(query, (f"%{cleaned_name}%",), db_path=db_path)
+    if row:
+        try:
+            user_row = fetch_one(
+                "SELECT email FROM users WHERE UPPER(student_id) = UPPER(?);",
+                (row["student_id"],),
+                db_path=db_path,
+            )
+            if user_row:
+                row["email"] = user_row["email"]
+        except Exception:
+            pass
+    student_id = row["student_id"] if row else cleaned_name
+    return _format_response(student_id, row)
+
+
+
+
 def get_student_attendance(
     student_id: str, db_path: str | Path = DEFAULT_DB_PATH
 ) -> dict[str, Any]:
@@ -111,3 +139,49 @@ def list_students(
     ORDER BY student_id ASC;
     """
     return fetch_all(query, (), db_path=db_path)
+
+
+def verify_student_login(
+    email: str,
+    password: str,
+    db_path: str | Path = DEFAULT_DB_PATH,
+) -> dict[str, Any]:
+    """Verify student login credentials against the users table."""
+    cleaned_email = str(email).strip().lower()
+    cleaned_pwd = str(password).strip()
+
+    query = """
+    SELECT student_id, student_name, email
+    FROM users
+    WHERE LOWER(email) = ? AND password = ?;
+    """
+    row = fetch_one(query, (cleaned_email, cleaned_pwd), db_path=db_path)
+    if row is None:
+        return {
+            "status": "UNAUTHORIZED",
+            "authenticated": False,
+            "user": None,
+            "source": "sqlite:users",
+        }
+    return {
+        "status": "AUTHENTICATED",
+        "authenticated": True,
+        "user": row,
+        "source": "sqlite:users",
+    }
+
+
+def get_student_user_profile(
+    student_id: str,
+    db_path: str | Path = DEFAULT_DB_PATH,
+) -> dict[str, Any]:
+    """Retrieve user credentials profile by student ID."""
+    cleaned_id = str(student_id).strip()
+    query = """
+    SELECT student_id, student_name, email
+    FROM users
+    WHERE UPPER(student_id) = UPPER(?);
+    """
+    row = fetch_one(query, (cleaned_id,), db_path=db_path)
+    return _format_response(cleaned_id, row, table_name="users")
+

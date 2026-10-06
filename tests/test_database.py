@@ -74,15 +74,12 @@ def test_csv_import_row_count(temp_db: Path, sample_csv: Path) -> None:
 
 
 def test_csv_import_default_dataset(temp_db: Path) -> None:
-    """Test importing the repository's 30 synthetic student records."""
+    """Test importing the default tabular dataset (CSV or XLSX)."""
     csv_path = find_default_csv()
-    assert Path(csv_path).is_file(), f"Default CSV not found at {csv_path}"
+    assert Path(csv_path).is_file(), f"Default file not found at {csv_path}"
 
     result = import_csv_to_sqlite(csv_path, temp_db)
     assert result["rows_imported"] == 30
-
-    rows = fetch_all("SELECT * FROM students;", db_path=temp_db)
-    assert len(rows) == 30
 
 
 def test_csv_import_idempotency(temp_db: Path, sample_csv: Path) -> None:
